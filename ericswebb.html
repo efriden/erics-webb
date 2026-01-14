@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Builder</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+
+    header {
+      background: #2c3e50;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .last-saved {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      font-weight: 400;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    .btn-lang {
+      background: #34495e;
+      color: white;
+      min-width: 50px;
+    }
+
+    .btn-lang:hover {
+      background: #2c3e50;
+    }
+
+    .share-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .share-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 0.5rem;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 200px;
+      z-index: 1000;
+    }
+
+    .share-menu.active {
+      display: block;
+    }
+
+    .share-option {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      color: #2c3e50;
+      border-bottom: 1px solid #ecf0f1;
+      transition: background 0.2s;
+    }
+
+    .share-option:last-child {
+      border-bottom: none;
+    }
+
+    .share-option:hover {
+      background: #ecf0f1;
+    }
+
+    .share-option-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .share-option-desc {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .editor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-right: 1px solid #ddd;
+    }
+
+    .editor-header {
+      padding: 0.75rem 1rem;
+      background: #ecf0f1;
+      border-bottom: 1px solid #ddd;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    textarea {
+      flex: 1;
+      border: none;
+      padding: 1rem;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 0.9rem;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+    }
+
+    iframe {
+      flex: 1;
+      border: none;
+      background: white;
+    }
+
+    .examples {
+      padding: 1rem;
+      background: #ecf0f1;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .examples select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+      }
+      
+      .editor-panel {
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1 id="title">Web Builder</h1>
+      <span class="last-saved" id="lastSaved"></span>
+    </div>
+    <div class="controls">
+      <button class="btn-lang" id="langBtn">SV</button>
+      <button class="btn-secondary" id="viewBtn">View site</button>
+      <div class="share-dropdown">
+        <button class="btn-primary" id="shareBtn">Save & Share</button>
+        <div class="share-menu" id="shareMenu">
+          <div class="share-option" id="shareEditor">
+            <div class="share-option-title" id="shareEditorTitle">Editor link</div>
+            <div class="share-option-desc" id="shareEditorDesc">Continue editing later</div>
+          </div>
+          <div class="share-option" id="shareSite">
+            <div class="share-option-title" id="shareSiteTitle">Site link</div>
+            <div class="share-option-desc" id="shareSiteDesc">Show others your page</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="editor-panel">
+      <div class="editor-header" id="htmlLabel">HTML</div>
+      <textarea id="htmlEditor" spellcheck="false"></textarea>
+    </div>
+
+    <div class="editor-panel">
+      <div class="editor-header" id="cssLabel">CSS</div>
+      <textarea id="cssEditor" spellcheck="false"></textarea>
+    </div>
+
+    <div class="preview-panel">
+      <div class="editor-header" id="previewLabel">Preview</div>
+      <div class="examples">
+        <select id="exampleSelect">
+          <option value="">Load example...</option>
+          <option value="product">Produktsida</option>
+          <option value="portfolio">Konstportfölj</option>
+          <option value="blog">Blog Post</option>
+        </select>
+      </div>
+      <iframe id="preview"></iframe>
+    </div>
+  </main>
+
+  <script>
+    const strings = {
+      en: {
+        title: "Erics web builder",
+        view: "View site",
+        save: "Save & Share",
+        html: "HTML",
+        css: "CSS",
+        preview: "Preview",
+        langBtn: "SV",
+        examples: "Load example...",
+        lastSaved: "Last saved:",
+        shareEditorTitle: "Editor link",
+        shareEditorDesc: "Continue editing later",
+        shareSiteTitle: "Site link",
+        shareSiteDesc: "Show others your page",
+        copied: "Copied!"
+      },
+      sv: {
+        title: "Erics webbyggare",
+        view: "Visa sida",
+        save: "Spara & dela",
+        html: "HTML",
+        css: "CSS",
+        preview: "Förhandsgranskning",
+        langBtn: "EN",
+        examples: "Ladda exempel...",
+        lastSaved: "Senast sparad:",
+        shareEditorTitle: "Editorlänk",
+        shareEditorDesc: "Fortsätt redigera senare",
+        shareSiteTitle: "Webbplatslänk",
+        shareSiteDesc: "Visa för andra",
+        copied: "Kopierad!"
+      }
+    };
+	
+	  const examples = {
+	    product: {
+	      html: `<!DOCTYPE html>
+<html>
+<head>
+    <title>SuperWidget Pro</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">SuperWidget</div>
+            <button class="cta-btn">Kom igång</button>
+        </nav>
+    </header>
+    
+    <section class="hero">
+        <h1>En helt fantastisk grej.</h1>
+        <p class="hero-text">Öka din produktivitet med 300% med vårt revolutionerande SuperWidget Pro</p>
+        <button class="hero-btn">Prova gratis i 30 dagar</button>
+    </section>
+    
+    <section class="features">
+        <h2>Varför välja SuperWidget?</h2>
+        <div class="feature-grid">
+            <div class="feature">
+                <div class="icon">⚡</div>
+                <h3>Blixtsnabbt</h3>
+                <p>Bearbeta data på millisekunder</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🔒</div>
+                <h3>Säkert</h3>
+                <p>Kryptering på banknivå</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📱</div>
+                <h3>Mobilanpassat</h3>
+                <p>Fungerar på alla enheter</p>
+            </div>
+        </div>
+    </section>
+    
+    <section class="pricing">
+        <h2>Enkel prissättning</h2>
+        <div class="price-box">
+            <h3>Pro-plan</h3>
+            <div class="price">299 kr<span>/månad</span></div>
+            <ul>
+                <li>✓ Obegränsat antal widgets</li>
+                <li>✓ Support dygnet runt</li>
+                <li>✓ Avancerad analys</li>
+            </ul>
+            <button class="cta-btn">Starta nu</button>
+        </div>
+    </section>
+</body>
+</html>`,
+        css: `* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+}
+
+header {
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #5b21b6;
+}
+
+.hero {
+    text-align: center;
+    padding: 100px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.hero-text {
+    font-size: 1.3rem;
+    margin-bottom: 30px;
+    opacity: 0.95;
+}
+
+.hero-btn {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.hero-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.features {
+    max-width: 1200px;
+    margin: 80px auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.features h2 {
+    font-size: 2.5rem;
+    margin-bottom: 50px;
+    color: #333;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+}
+
+.feature {
+    padding: 30px;
+    border-radius: 10px;
+    background: #f8f9fa;
+}
+
+.icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.feature h3 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.pricing {
+    background: #f8f9fa;
+    padding: 80px 20px;
+    text-align: center;
+}
+
+.pricing h2 {
+    font-size: 2.5rem;
+    margin-bottom: 50px;
+}
+
+.price-box {
+    max-width: 400px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.price {
+    font-size: 3rem;
+    color: #667eea;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.price span {
+    font-size: 1.5rem;
+    color: #888;
+}
+
+.price-box ul {
+    list-style: none;
+    margin: 30px 0;
+    text-align: left;
+}
+
+.price-box li {
+    padding: 10px 0;
+    font-size: 1.1rem;
+}
+
+.cta-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.cta-btn:hover {
+    background: #5568d3;
+}`
+      },
+      portfolio: {
+        html: `<header>
+  <h1>Anna Lindström</h1>
+  <p>Konstnär & Illustratör</p>
+</header>
+<section class="gallery">
+  <div class="artwork">
+    <a href="https://commons.wikimedia.org/wiki/File:Edvard_Munch_-_The_Scream_-_Google_Art_Project.jpg" target="_blank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/400px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg" alt="Skriket av Edvard Munch">
+    </a>
+    <h2>Nordisk expressionism</h2>
+    <p>Inspiration från de stora mästarna</p>
+  </div>
+  <div class="artwork">
+    <a href="https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg" target="_blank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/500px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg" alt="Stjärnenatten av Van Gogh">
+    </a>
+    <h2>Nattliga landskap</h2>
+    <p>Studier i ljus och rörelse</p>
+  </div>
+  <div class="artwork">
+    <a href="https://commons.wikimedia.org/wiki/File:Monet_-_Impression,_Sunrise.jpg" target="_blank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Sunrise.jpg/500px-Monet_-_Impression%2C_Sunrise.jpg" alt="Soluppgång av Claude Monet">
+    </a>
+    <h2>Impressionistiska vyer</h2>
+    <p>Fångande av stämningar och atmosfär</p>
+  </div>
+  <div class="artwork">
+    <a href="https://commons.wikimedia.org/wiki/File:Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg" target="_blank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg/400px-Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg" alt="Mjölkpigan av Vermeer">
+    </a>
+    <h2>Klassiska stilleben</h2>
+    <p>Holländsk mästartradition</p>
+  </div>
+</section>`,
+        css: `body {
+  margin: 0;
+  font-family: 'Georgia', serif;
+  background: #fafafa;
+}
+
+header {
+  background: #222;
+  color: white;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.gallery {
+  max-width: 1200px;
+  margin: 60px auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.artwork {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.artwork:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.artwork a {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.artwork img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 4px;
+  transition: opacity 0.3s ease;
+}
+
+.artwork a:hover img {
+  opacity: 0.9;
+}
+
+.artwork h2 {
+  margin-bottom: 0.5rem;
+  color: #222;
+  font-size: 1.3rem;
+}
+
+.artwork p {
+  color: #666;
+  line-height: 1.6;
+}`
+      },
+      blog: {
+        html: `<article>
+  <header>
+    <h1>Konsten att förenkla</h1>
+    <time>13 januari 2026</time>
+  </header>
+  <p>Minimalism handlar inte om att ha mindre. Det handlar om att göra plats för mer av det som betyder något.</p>
+  <p>I vår alltmer komplexa värld har förmågan att förenkla blivit en superkraft. Oavsett om det gäller design, livsstil eller tanke, kan mindre verkligen vara mer.</p>
+  <h2>Nyckelprinciper</h2>
+  <ul>
+    <li>Avsiktlighet i varje val</li>
+    <li>Kvalitet framför kvantitet</li>
+    <li>Utrymme att andas</li>
+  </ul>
+</article>`,
+        css: `body {
+  margin: 0;
+  background: #f9f9f9;
+  font-family: 'Charter', 'Georgia', serif;
+  line-height: 1.7;
+  color: #333;
+}
+
+article {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 60px 20px;
+  background: white;
+  min-height: 100vh;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+time {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+p {
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+ul {
+  margin-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}`
+      }
+    };
+	
+
+    class WebBuilder {
+      constructor() {
+        this.elements = {
+          htmlEditor: document.getElementById('htmlEditor'),
+          cssEditor: document.getElementById('cssEditor'),
+          preview: document.getElementById('preview'),
+          shareBtn: document.getElementById('shareBtn'),
+          shareMenu: document.getElementById('shareMenu'),
+          shareEditor: document.getElementById('shareEditor'),
+          shareSite: document.getElementById('shareSite'),
+          viewBtn: document.getElementById('viewBtn'),
+          langBtn: document.getElementById('langBtn'),
+          exampleSelect: document.getElementById('exampleSelect'),
+          title: document.getElementById('title'),
+          htmlLabel: document.getElementById('htmlLabel'),
+          cssLabel: document.getElementById('cssLabel'),
+          previewLabel: document.getElementById('previewLabel'),
+          lastSaved: document.getElementById('lastSaved'),
+          shareEditorTitle: document.getElementById('shareEditorTitle'),
+          shareEditorDesc: document.getElementById('shareEditorDesc'),
+          shareSiteTitle: document.getElementById('shareSiteTitle'),
+          shareSiteDesc: document.getElementById('shareSiteDesc')
+        };
+
+        this.urlTimer = null;
+        this.lang = 'sv';
+        
+        this.init();
+      }
+
+      init() {
+        this.loadFromUrl();
+        this.setupEventListeners();
+        this.updatePreview();
+      }
+
+      loadFromUrl() {
+        const params = new URLSearchParams(location.search);
+        const compressed = params.get('d');
+        const siteData = params.get('s');
+        const lang = params.get('lang') || 'sv';
+        
+        this.lang = lang;
+        this.updateLanguage();
+
+        // If it's a site-only link, render it directly
+        if (siteData && !compressed) {
+          try {
+            const data = JSON.parse(this.decompress(siteData));
+            this.renderSiteOnly(data);
+            return;
+          } catch (e) {
+            console.error('Failed to load site data:', e);
+          }
+        }
+
+        if (compressed) {
+          try {
+            const data = JSON.parse(this.decompress(compressed));
+            this.elements.htmlEditor.value = data.html || '';
+            this.elements.cssEditor.value = data.css || '';
+          } catch (e) {
+            console.error('Failed to load from URL:', e);
+          }
+        } else {
+          // First load with empty editors - create initial URL
+          this.elements.htmlEditor.value = '';
+          this.elements.cssEditor.value = '';
+          this.updateUrlNow(true);
+        }
+      }
+
+      renderSiteOnly(data) {
+        // Hide the editor interface and show only the rendered site
+        document.querySelector('header').style.display = 'none';
+        document.querySelector('main').innerHTML = '';
+        
+        const doc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${data.css}</style>
+</head>
+<body>
+${data.html}
+</body>
+</html>`;
+
+        document.write(doc);
+        document.close();
+      }
+
+      setupEventListeners() {
+        this.elements.htmlEditor.addEventListener('input', () => {
+          this.updatePreview();
+          this.scheduleUrlUpdate();
+        });
+
+        this.elements.cssEditor.addEventListener('input', () => {
+          this.updatePreview();
+          this.scheduleUrlUpdate();
+        });
+
+        this.elements.shareBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.elements.shareMenu.classList.toggle('active');
+        });
+
+        this.elements.shareEditor.addEventListener('click', () => {
+          this.copyShareUrl('editor');
+        });
+
+        this.elements.shareSite.addEventListener('click', () => {
+          this.copyShareUrl('site');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.share-dropdown')) {
+            this.elements.shareMenu.classList.remove('active');
+          }
+        });
+
+        this.elements.viewBtn.addEventListener('click', () => {
+          this.openInNewTab();
+        });
+
+        this.elements.langBtn.addEventListener('click', () => {
+          this.toggleLanguage();
+        });
+
+        this.elements.exampleSelect.addEventListener('change', (e) => {
+          if (e.target.value) {
+            this.loadExample(e.target.value);
+            e.target.value = '';
+          }
+        });
+
+        window.addEventListener('popstate', () => {
+          this.loadFromUrl();
+          this.updatePreview();
+        });
+      }
+
+      updatePreview() {
+        const html = this.elements.htmlEditor.value;
+        const css = this.elements.cssEditor.value;
+        
+        const doc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${css}</style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+
+        const blob = new Blob([doc], { type: 'text/html' });
+        this.elements.preview.src = URL.createObjectURL(blob);
+      }
+
+      scheduleUrlUpdate() {
+        clearTimeout(this.urlTimer);
+        this.urlTimer = setTimeout(() => {
+          this.updateUrlNow(false);
+        }, 400);
+      }
+
+      updateUrlNow(replace) {
+        const url = this.getShareUrl();
+        if (replace) {
+          history.replaceState(null, '', url);
+        } else {
+          history.pushState(null, '', url);
+        }
+        this.updateLastSaved();
+      }
+
+      getShareUrl() {
+        const data = {
+          html: this.elements.htmlEditor.value,
+          css: this.elements.cssEditor.value
+        };
+        
+        const compressed = this.compress(JSON.stringify(data));
+        const params = new URLSearchParams();
+        params.set('d', compressed);
+        params.set('lang', this.lang);
+        
+        return `${location.pathname}?${params.toString()}`;
+      }
+
+      compress(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+          return String.fromCharCode('0x' + p1);
+        }));
+      }
+
+      decompress(str) {
+        return decodeURIComponent(atob(str).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+      }
+
+      copyShareUrl(type) {
+        let url;
+        
+        if (type === 'editor') {
+          // Link back to this editor with current state
+          url = location.origin + this.getShareUrl();
+        } else {
+          // Link to rendered site only
+          url = location.origin + this.getSiteUrl();
+        }
+        
+        navigator.clipboard.writeText(url).then(() => {
+          const s = strings[this.lang];
+          const originalText = this.elements.shareBtn.textContent;
+          this.elements.shareBtn.textContent = s.copied;
+          this.elements.shareMenu.classList.remove('active');
+          setTimeout(() => {
+            this.elements.shareBtn.textContent = originalText;
+          }, 2000);
+        });
+      }
+
+      getSiteUrl() {
+        const data = {
+          html: this.elements.htmlEditor.value,
+          css: this.elements.cssEditor.value
+        };
+        
+        const compressed = this.compress(JSON.stringify(data));
+        const params = new URLSearchParams();
+        params.set('s', compressed);
+        
+        return `${location.pathname}?${params.toString()}`;
+      }
+
+      openInNewTab() {
+        const html = this.elements.htmlEditor.value;
+        const css = this.elements.cssEditor.value;
+        
+        const doc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${css}</style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+
+        const blob = new Blob([doc], { type: 'text/html' });
+        window.open(URL.createObjectURL(blob), '_blank');
+      }
+
+      toggleLanguage() {
+        this.lang = this.lang === 'en' ? 'sv' : 'en';
+        this.updateLanguage();
+        this.updateUrlNow(true);
+      }
+
+      updateLanguage() {
+        const s = strings[this.lang];
+        this.elements.title.textContent = s.title;
+        this.elements.viewBtn.textContent = s.view;
+        this.elements.shareBtn.textContent = s.save;
+        this.elements.langBtn.textContent = s.langBtn;
+        this.elements.htmlLabel.textContent = s.html;
+        this.elements.cssLabel.textContent = s.css;
+        this.elements.previewLabel.textContent = s.preview;
+        this.elements.exampleSelect.options[0].text = s.examples;
+        this.elements.shareEditorTitle.textContent = s.shareEditorTitle;
+        this.elements.shareEditorDesc.textContent = s.shareEditorDesc;
+        this.elements.shareSiteTitle.textContent = s.shareSiteTitle;
+        this.elements.shareSiteDesc.textContent = s.shareSiteDesc;
+        this.updateLastSaved();
+      }
+
+      updateLastSaved() {
+        const now = new Date();
+        const time = now.toLocaleTimeString(this.lang === 'sv' ? 'sv-SE' : 'en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        const s = strings[this.lang];
+        this.elements.lastSaved.textContent = `${s.lastSaved} ${time}`;
+      }
+
+      loadExample(key) {
+        const example = examples[key];
+        if (example) {
+          this.elements.htmlEditor.value = example.html;
+          this.elements.cssEditor.value = example.css;
+          this.updatePreview();
+          this.updateUrlNow(false);
+        }
+      }
+    }
+
+    new WebBuilder();
+  </script>
+</body>
+</html>
