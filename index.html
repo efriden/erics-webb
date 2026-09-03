@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web Builder</title>
+
+  <!-- CodeMirror 5 (editor) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/lint.min.css">
+
   <style>
     * {
       box-sizing: border-box;
@@ -159,15 +164,24 @@
       color: #2c3e50;
     }
 
-    textarea {
-      flex: 1;
-      border: none;
-      padding: 1rem;
+    /* CodeMirror fills the editor panel */
+    .editor-panel .CodeMirror {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 0;               /* allow shrinking inside the flex column */
       font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
       font-size: 0.9rem;
-      resize: none;
-      outline: none;
       line-height: 1.5;
+    }
+
+    .CodeMirror-gutters {
+      border-right: 1px solid #eee;
+      background: #fafafa;
+    }
+
+    /* Highlight the active line for easier reading */
+    .CodeMirror-focused .CodeMirror-activeline-background {
+      background: #f0f6ff;
     }
 
     .preview-panel {
@@ -209,6 +223,24 @@
       }
     }
   </style>
+
+  <!-- CodeMirror core + language modes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <!-- Editing niceties -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+  <!-- Optional syntax checking (linting) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/lint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/csslint/1.0.5/csslint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/css-lint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/htmlhint/0.9.13/htmlhint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/html-lint.min.js"></script>
 </head>
 <body>
   <header>
@@ -719,14 +751,74 @@ li {
 
         this.urlTimer = null;
         this.lang = 'sv';
-        
+        this.suppressChange = false;
+
+        this.initEditors();
         this.init();
+      }
+
+      initEditors() {
+        const tabKeys = {
+          // Tab inserts 2 spaces (or indents the selection); Shift-Tab outdents
+          Tab: (cm) => {
+            if (cm.somethingSelected()) {
+              cm.indentSelection('add');
+            } else {
+              cm.replaceSelection('  ', 'end');
+            }
+          },
+          'Shift-Tab': (cm) => cm.indentSelection('subtract')
+        };
+
+        const makeEditor = (textarea, mode, linter) => {
+          const options = {
+            mode: mode,
+            lineNumbers: true,
+            tabSize: 2,
+            indentUnit: 2,
+            indentWithTabs: false,
+            smartIndent: true,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            autoCloseTags: (mode === 'htmlmixed'),
+            styleActiveLine: true,
+            spellcheck: false,
+            extraKeys: tabKeys
+          };
+
+          // Optional syntax checking — only enabled if the linter library loaded
+          if (linter === 'css' && window.CSSLint) {
+            options.lint = true;
+            options.gutters = ['CodeMirror-lint-markers', 'CodeMirror-linenumbers'];
+          } else if (linter === 'html' && window.HTMLHint) {
+            options.lint = true;
+            options.gutters = ['CodeMirror-lint-markers', 'CodeMirror-linenumbers'];
+          }
+
+          return CodeMirror.fromTextArea(textarea, options);
+        };
+
+        this.htmlCM = makeEditor(this.elements.htmlEditor, 'htmlmixed', 'html');
+        this.cssCM = makeEditor(this.elements.cssEditor, 'css', 'css');
+      }
+
+      // Set editor content without triggering a URL/history update
+      setEditorValue(cm, value) {
+        this.suppressChange = true;
+        cm.setValue(value || '');
+        cm.clearHistory();
+        this.suppressChange = false;
       }
 
       init() {
         this.loadFromUrl();
         this.setupEventListeners();
         this.updatePreview();
+        // Ensure editors size correctly once the flex layout has settled
+        requestAnimationFrame(() => {
+          this.htmlCM.refresh();
+          this.cssCM.refresh();
+        });
       }
 
       loadFromUrl() {
@@ -752,15 +844,15 @@ li {
         if (compressed) {
           try {
             const data = JSON.parse(this.decompress(compressed));
-            this.elements.htmlEditor.value = data.html || '';
-            this.elements.cssEditor.value = data.css || '';
+            this.setEditorValue(this.htmlCM, data.html || '');
+            this.setEditorValue(this.cssCM, data.css || '');
           } catch (e) {
             console.error('Failed to load from URL:', e);
           }
         } else {
           // First load with empty editors - create initial URL
-          this.elements.htmlEditor.value = '';
-          this.elements.cssEditor.value = '';
+          this.setEditorValue(this.htmlCM, '');
+          this.setEditorValue(this.cssCM, '');
           this.updateUrlNow(true);
         }
       }
@@ -787,12 +879,14 @@ ${data.html}
       }
 
       setupEventListeners() {
-        this.elements.htmlEditor.addEventListener('input', () => {
+        this.htmlCM.on('change', () => {
+          if (this.suppressChange) return;
           this.updatePreview();
           this.scheduleUrlUpdate();
         });
 
-        this.elements.cssEditor.addEventListener('input', () => {
+        this.cssCM.on('change', () => {
+          if (this.suppressChange) return;
           this.updatePreview();
           this.scheduleUrlUpdate();
         });
@@ -839,8 +933,8 @@ ${data.html}
       }
 
       updatePreview() {
-        const html = this.elements.htmlEditor.value;
-        const css = this.elements.cssEditor.value;
+        const html = this.htmlCM.getValue();
+        const css = this.cssCM.getValue();
         
         const doc = `<!DOCTYPE html>
 <html>
@@ -877,8 +971,8 @@ ${html}
 
       getShareUrl() {
         const data = {
-          html: this.elements.htmlEditor.value,
-          css: this.elements.cssEditor.value
+          html: this.htmlCM.getValue(),
+          css: this.cssCM.getValue()
         };
         
         const compressed = this.compress(JSON.stringify(data));
@@ -925,8 +1019,8 @@ ${html}
 
       getSiteUrl() {
         const data = {
-          html: this.elements.htmlEditor.value,
-          css: this.elements.cssEditor.value
+          html: this.htmlCM.getValue(),
+          css: this.cssCM.getValue()
         };
         
         const compressed = this.compress(JSON.stringify(data));
@@ -937,8 +1031,8 @@ ${html}
       }
 
       openInNewTab() {
-        const html = this.elements.htmlEditor.value;
-        const css = this.elements.cssEditor.value;
+        const html = this.htmlCM.getValue();
+        const css = this.cssCM.getValue();
         
         const doc = `<!DOCTYPE html>
 <html>
@@ -992,8 +1086,8 @@ ${html}
       loadExample(key) {
         const example = examples[key];
         if (example) {
-          this.elements.htmlEditor.value = example.html;
-          this.elements.cssEditor.value = example.css;
+          this.setEditorValue(this.htmlCM, example.html);
+          this.setEditorValue(this.cssCM, example.css);
           this.updatePreview();
           this.updateUrlNow(false);
         }
