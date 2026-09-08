@@ -54,6 +54,43 @@
     .controls {
       display: flex;
       gap: 0.5rem;
+      align-items: center;
+    }
+
+    .view-toggles {
+      display: flex;
+      gap: 0.25rem;
+      margin-right: 0.5rem;
+      background: #34495e;
+      padding: 0.25rem;
+      border-radius: 6px;
+    }
+
+    .view-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .view-toggle:hover {
+      background: #2c3e50;
+    }
+
+    .view-toggle input {
+      cursor: pointer;
+      margin: 0;
+    }
+
+    /* A panel hidden via its checkbox */
+    .panel-hidden {
+      display: none !important;
     }
 
     button {
@@ -150,6 +187,8 @@
 
     .editor-panel {
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       background: white;
@@ -186,6 +225,8 @@
 
     .preview-panel {
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       background: white;
@@ -249,6 +290,11 @@
       <span class="last-saved" id="lastSaved"></span>
     </div>
     <div class="controls">
+      <div class="view-toggles" id="viewToggles">
+        <label class="view-toggle"><input type="checkbox" id="toggleHtml" checked><span id="toggleHtmlLabel">HTML</span></label>
+        <label class="view-toggle"><input type="checkbox" id="toggleCss" checked><span id="toggleCssLabel">CSS</span></label>
+        <label class="view-toggle"><input type="checkbox" id="togglePreview" checked><span id="togglePreviewLabel">Preview</span></label>
+      </div>
       <button class="btn-lang" id="langBtn">SV</button>
       <button class="btn-secondary" id="viewBtn">View site</button>
       <div class="share-dropdown">
@@ -268,17 +314,17 @@
   </header>
 
   <main>
-    <div class="editor-panel">
+    <div class="editor-panel" id="htmlPanel">
       <div class="editor-header" id="htmlLabel">HTML</div>
       <textarea id="htmlEditor" spellcheck="false"></textarea>
     </div>
 
-    <div class="editor-panel">
+    <div class="editor-panel" id="cssPanel">
       <div class="editor-header" id="cssLabel">CSS</div>
       <textarea id="cssEditor" spellcheck="false"></textarea>
     </div>
 
-    <div class="preview-panel">
+    <div class="preview-panel" id="previewPanel">
       <div class="editor-header" id="previewLabel">Preview</div>
       <div class="examples">
         <select id="exampleSelect">
@@ -746,7 +792,16 @@ li {
           shareEditorTitle: document.getElementById('shareEditorTitle'),
           shareEditorDesc: document.getElementById('shareEditorDesc'),
           shareSiteTitle: document.getElementById('shareSiteTitle'),
-          shareSiteDesc: document.getElementById('shareSiteDesc')
+          shareSiteDesc: document.getElementById('shareSiteDesc'),
+          htmlPanel: document.getElementById('htmlPanel'),
+          cssPanel: document.getElementById('cssPanel'),
+          previewPanel: document.getElementById('previewPanel'),
+          toggleHtml: document.getElementById('toggleHtml'),
+          toggleCss: document.getElementById('toggleCss'),
+          togglePreview: document.getElementById('togglePreview'),
+          toggleHtmlLabel: document.getElementById('toggleHtmlLabel'),
+          toggleCssLabel: document.getElementById('toggleCssLabel'),
+          togglePreviewLabel: document.getElementById('togglePreviewLabel')
         };
 
         this.urlTimer = null;
@@ -800,6 +855,15 @@ li {
 
         this.htmlCM = makeEditor(this.elements.htmlEditor, 'htmlmixed', 'html');
         this.cssCM = makeEditor(this.elements.cssEditor, 'css', 'css');
+      }
+
+      // Show or hide a panel; re-layout editors afterward so they fit the new size
+      setPanelVisible(panel, visible) {
+        panel.classList.toggle('panel-hidden', !visible);
+        requestAnimationFrame(() => {
+          this.htmlCM.refresh();
+          this.cssCM.refresh();
+        });
       }
 
       // Set editor content without triggering a URL/history update
@@ -924,6 +988,20 @@ ${data.html}
             this.loadExample(e.target.value);
             e.target.value = '';
           }
+        });
+
+        this.elements.toggleHtml.addEventListener('change', (e) => {
+          this.setPanelVisible(this.elements.htmlPanel, e.target.checked);
+          this.htmlCM.refresh();
+        });
+
+        this.elements.toggleCss.addEventListener('change', (e) => {
+          this.setPanelVisible(this.elements.cssPanel, e.target.checked);
+          this.cssCM.refresh();
+        });
+
+        this.elements.togglePreview.addEventListener('change', (e) => {
+          this.setPanelVisible(this.elements.previewPanel, e.target.checked);
         });
 
         window.addEventListener('popstate', () => {
@@ -1065,6 +1143,9 @@ ${html}
         this.elements.htmlLabel.textContent = s.html;
         this.elements.cssLabel.textContent = s.css;
         this.elements.previewLabel.textContent = s.preview;
+        this.elements.toggleHtmlLabel.textContent = s.html;
+        this.elements.toggleCssLabel.textContent = s.css;
+        this.elements.togglePreviewLabel.textContent = s.preview;
         this.elements.exampleSelect.options[0].text = s.examples;
         this.elements.shareEditorTitle.textContent = s.shareEditorTitle;
         this.elements.shareEditorDesc.textContent = s.shareEditorDesc;
